@@ -3,3 +3,4 @@ node_modules
 build
 config
 src/oauth
+src/secrets

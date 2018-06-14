@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
-import MenuItem from '@material-ui/core/MenuItem'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button';
 import validator from 'validator'
@@ -37,11 +36,8 @@ class Form extends React.Component {
         }
     }
 
-
-
     submitForm(e) {
         e.preventDefault()
-        console.log(this.state)
         let newBounty = {
             repoUrl: this.state.repoUrl.value,
             issueID: parseInt(this.state.issueID.value),
@@ -72,7 +68,6 @@ class Form extends React.Component {
             newState.value = event.target.value
             newState.valid = validator.isInt(event.target.value)
         }
-
         this.setState({
             [name]: newState
         })
@@ -82,15 +77,14 @@ class Form extends React.Component {
 
         const { classes } = this.props
 
-        let error = 'error',
+        let error = true,
             submit = true,
             submitButton = <Button variant="contained" type="submit" color="primary" className={classes.button}> Submit </Button>
 
-        Object.keys(this.state).map((key, idx, arr) => {
-            if (!this.state[key].value) {
-                submit = false
-            }
+        Object.keys(this.state).map(key => {
+            if (!this.state[key].value) { submit = false }
         })
+        
         return (
             <form className={classes.container} onSubmit={this.submitForm.bind(this)} noValidate autoComplete="off">
                 <TextField
@@ -101,7 +95,7 @@ class Form extends React.Component {
                     }}
                     placeholder="https://github.com/YourUsername/YourRepository"
                     fullWidth
-                    {...(!this.state.repoUrl.valid && { error }) }
+                    {...(!this.state.repoUrl.valid && { error })}
                     value={this.state.repoUrl.value}
                     onChange={this.handleChange('repoUrl')}
                     margin="normal"
@@ -109,7 +103,7 @@ class Form extends React.Component {
                 <TextField
                     id="IssueID"
                     label="IssueID"
-                    {...(!this.state.issueID.valid && { error }) }
+                    {...(!this.state.issueID.valid && { error })}
                     className={classes.textField}
                     value={this.state.issueID.value}
                     onChange={this.handleChange('issueID')}
@@ -118,7 +112,7 @@ class Form extends React.Component {
                 <TextField
                     id="Prize"
                     label="Prize"
-                    {...(!this.state.prize.valid && { error }) }
+                    {...(!this.state.prize.valid && { error })}
                     className={classes.textField}
                     value={this.state.prize.value}
                     onChange={this.handleChange('prize')}
@@ -127,7 +121,7 @@ class Form extends React.Component {
                 <TextField
                     id="Duration"
                     label="duration"
-                    {...(!this.state.duration.valid && { error }) }
+                    {...(!this.state.duration.valid && { error })}
                     value={this.state.duration.value}
                     onChange={this.handleChange('duration')}
                     className={classes.textField}

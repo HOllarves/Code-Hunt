@@ -9,10 +9,12 @@ import Paper from './components/material/Paper'
 import ButtonBases from './components/material/ButtonBases'
 import Form from './components/material/Form'
 import Grid from '@material-ui/core/Grid'
+import BountyCard from './components/BountyCard'
 
 //Toast
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+
 
 
 class App extends Component {
@@ -22,14 +24,16 @@ class App extends Component {
       contractInstance: {},
       web3: null,
       accessToken: '',
-      currentAction: null
+      currentAction: null,
+      bountyList: [],
+      bountyForm: {}
     }
+    this.loadList = this.loadList.bind(this)
   }
 
   componentWillMount() {
     // Get network provider and web3 instance.
     // See utils/getWeb3 for more info.
-
     getWeb3
       .then(results => {
         this.setState({
@@ -43,6 +47,8 @@ class App extends Component {
       })
   }
 
+  compo
+
   instantiateContract() {
     const contract = require('truffle-contract')
     const huntContract = contract(HuntContract)
@@ -52,7 +58,7 @@ class App extends Component {
       else {
         this.setState({
           contractInstance: huntContract,
-          account: accounts[0]
+          account: accounts[0],
         })
       }
     })
@@ -68,7 +74,7 @@ class App extends Component {
             toast.success("Bounty added", { position: toast.POSITION.BOTTOM_CENTER })
           })
           .catch(error => {
-            toast.warn("Unable to add Bounty. Please check the console", { position: toast.POSITION.BOTTOM_CENTER })
+            toast.warn("Unable to add Bounty. It seems there's a bounty already registered with that address", { position: toast.POSITION.BOTTOM_CENTER })
             console.log(error)
           })
       })
@@ -79,44 +85,77 @@ class App extends Component {
   }
 
   actionSelected(selection) {
-    this.setState({ currentAction: selection })
+    Promise.all([this.loadList(this.state.contractInstance), this.loadForm()])
+        .then(data => {
+          let bountyList = data[0],
+          bountyForm = data[1]
+          this.setState({
+            bountyList: bountyList,
+            currentAction: selection,
+            bountyForm: bountyForm
+          })
+        })
   }
 
-  render() {
-    let action
-    if (this.state.currentAction) {
-      if (this.state.currentAction === "list") {
-        this.state.contractInstance.deployed()
-          .then(instance => {
-            return instance.getBounties()
+  async loadList(contract) {
+    let contractInstance
+    return contract.deployed()
+      .then(instance => {
+        contractInstance = instance
+        return instance.getBounties()
+      })
+      .then(bounties => {
+        if (bounties && bounties.length > 0) {
+          let loadedBounties = []
+          bounties.forEach(val => {
+            loadedBounties.push(contractInstance.getBounty(val))
           })
-          .then(bounties => {
-            console.log(bounties)
+          return Promise.all(loadedBounties)
+        }
+      })
+      .then(loadedBounties => {
+        if (loadedBounties && loadedBounties.length > 0) {
+          let stateBounties = []
+          loadedBounties.forEach((val, idx) => {
+            let bounty = {
+              repoUrl: val[0],
+              issueID: val[1].c[0],
+              prize: val[2].c[0],
+              duration: val[3].c[0],
+              createdOn: val[4].c[0],
+              finsihed: val[5]
+            }
+            stateBounties.push(<Grid item xs={4} key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
           })
-      }
-      if (this.state.currentAction === "add") {
-        action = (
-          <Grid
-            container
-            spacing={16}
-            justify={'center'}
-            direction={'row'}>
-            <Grid
-              item
-              xs={8}>
-              <Form newBounty={this.addBounty.bind(this)} />
-            </Grid>
-          </Grid>)
-      }
+          return stateBounties
+        }
+    })
+  }
+
+    loadForm() {
+      return (<Grid
+      container
+      spacing={16}
+      justify={'center'}
+      direction={'row'}>
+      <Grid
+        item
+        xs={8}>
+        <Form newBounty={this.addBounty.bind(this)} />
+      </Grid>
+    </Grid>)
     }
 
+  render() {
     return (
       <div className="App">
-        <ButtonAppBar loadAccessToken={this.loadToken.bind(this)} />
         <Grid
           container
           spacing={24}
-          justify={'center'}>
+          justify='center'>
+          <Grid item xs={12}>
+            <ButtonAppBar loadAccessToken={this.loadToken.bind(this)} />
+          </Grid>
           <Grid item xs={8}>
             <Paper />
           </Grid>
@@ -124,11 +163,17 @@ class App extends Component {
             <ButtonBases onSelect={this.actionSelected.bind(this)} />
           </Grid>
         </Grid>
-        {this.state.currentAction ? action : null}
+        {this.state.currentAction === "add" && this.state.bountyForm}
+        <Grid
+          container
+          spacing={24}
+          direction='row'
+          justify='center'>
+            {this.state.currentAction === "list" && this.state.bountyList}
+        </Grid>
         <ToastContainer />
       </div>
-    );
+    )
   }
 }
-
 export default App

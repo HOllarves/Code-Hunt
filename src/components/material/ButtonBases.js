@@ -96,7 +96,6 @@ function ButtonBases(props) {
     const { classes } = props
 
     function optionSelected(selection) {
-        console.log(selection)
         selection === "Bounties" ? selection = "list" : null
         selection === "Create new bounty" ? selection = "add" : null
         props.onSelect(selection)
