@@ -5,6 +5,7 @@ contract('HuntContract', function (accounts) {
   var contractInstance,
     testBounty = {
       repoUrl: "https://github.com/HOllarves/Code-Hunt",
+      userName: "HOllarves",
       issue: 1,
       duration: 432000,
       prize: 2000000000000000000
@@ -14,9 +15,10 @@ contract('HuntContract', function (accounts) {
     return HuntContract.deployed()
       .then((instance) => {
         contractInstance = instance
-        return contractInstance.createBounty(testBounty.repoUrl, testBounty.issue, testBounty.duration, { from: accounts[0], value: 2000000000000000000 })
+        return contractInstance.createBounty(testBounty.repoUrl, testBounty.userName, testBounty.issue, testBounty.duration, { from: accounts[0], value: 2000000000000000000 })
       })
       .then(transaction => {
+        console.log(transaction)
         return transaction.receipt.status
       })
       .then(response => {

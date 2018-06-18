@@ -10,7 +10,7 @@ import GitHubLogin from 'react-github-login'
 import * as secret from '../../oauth/secret'
 import Github from '../../services/github'
 
-const styles = {
+const styles = theme => ({
   root: {
     flexGrow: 1,
   },
@@ -21,42 +21,45 @@ const styles = {
     marginLeft: -12,
     marginRight: 20,
   },
-};
+});
 
-function ButtonAppBar(props) {
+class ButtonAppBar extends React.Component {
+  constructor(props) {
+    super(props)
+    this.githubHandler = new Github()
+  }
 
-  const { classes } = props;
-
-  const githubHandler = new Github()
-
-  const onSuccess = response => {
-    githubHandler.sendUserCode(response.code)
+  onSuccess(response) {
+    this.githubHandler.sendUserCode(response.code)
       .then(response => {
-        props.loadAccessToken(response.access_token)
+        this.props.loadAccessToken(response.access_token)
       })
-  };
+  }
 
-  const onFailure = response => console.error(response);
+  onFailure(response) { console.log(response) }
 
-  return (
-    <div className={classes.root}>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton className={classes.menuButton} color="inherit" aria-label="Menu">
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="title" color="inherit" className={classes.flex}>
-            Code Hunt
+  render() {
+    const { classes } = this.props;
+    return (
+      <div className={classes.root}>
+        <AppBar position="static">
+          <Toolbar>
+            <IconButton className={classes.menuButton} color="inherit" aria-label="Menu">
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="title" color="inherit" className={classes.flex}>
+              Code Hunt
             </Typography>
-          <GitHubLogin clientId={secret.default.id}
-            onSuccess={onSuccess}
-            onFailure={onFailure}
-            redirectUri=''
-            className="github-btn" />
-        </Toolbar>
-      </AppBar>
-    </div>
-  );
+            <GitHubLogin clientId={secret.default.id}
+              onSuccess={this.onSuccess.bind(this)}
+              onFailure={this.onFailure.bind(this)}
+              redirectUri=''
+              className="github-btn" />
+          </Toolbar>
+        </AppBar>
+      </div>
+    );
+  }
 }
 
 ButtonAppBar.propTypes = {

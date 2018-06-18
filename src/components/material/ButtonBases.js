@@ -92,50 +92,53 @@ const images = [
     }
 ]
 
-function ButtonBases(props) {
-    const { classes } = props
+class ButtonBases extends React.Component {
 
-    function optionSelected(selection) {
-        selection === "Bounties" ? selection = "list" : null
-        selection === "Create new bounty" ? selection = "add" : null
-        props.onSelect(selection)
+    constructor(props) {
+        super(props)
     }
 
-    return (
-        <div className={classes.root}>
-            {images.map(image => (
-                <ButtonBase
-                    focusRipple
-                    key={image.title}
-                    className={classes.image}
-                    focusVisibleClassName={classes.focusVisible}
-                    style={{
-                        width: image.width
-                    }}
-                    onClick={() => { optionSelected(image.title) }}
-                >
-                    <span
-                        className={classes.imageSrc}
+    optionSelected(selection) {
+        selection === "Bounties" ? selection = "list" : null
+        selection === "Create new bounty" ? selection = "add" : null
+        this.props.onSelect(selection)
+    }
+
+    render() {
+        const { classes } = this.props
+        return (
+            <div className={classes.root}>
+                {images.map(image => (
+                    <ButtonBase
+                        focusRipple
+                        key={image.title}
+                        className={classes.image}
+                        focusVisibleClassName={classes.focusVisible}
                         style={{
-                            backgroundImage: `url(${image.url})`
+                            width: image.width
                         }}
-                    />
-                    <span className={classes.imageBackdrop} />
-                    <span className={classes.imageButton}>
-                        <Typography
-                            component="span"
-                            variant="subheading"
-                            color="inherit"
-                            className={classes.imageTitle}
-                        >
-                            {image.title}
-                            <span className={classes.imageMarked} />
-                        </Typography>
-                    </span>
-                </ButtonBase>
-            ))}
-        </div>
-    )
+                        onClick={() => { this.optionSelected(image.title) }}>
+                        <span
+                            className={classes.imageSrc}
+                            style={{
+                                backgroundImage: `url(${image.url})`
+                            }} />
+                        <span className={classes.imageBackdrop} />
+                        <span className={classes.imageButton}>
+                            <Typography
+                                component="span"
+                                variant="subheading"
+                                color="inherit"
+                                className={classes.imageTitle}>
+                                {image.title}
+                                <span className={classes.imageMarked} />
+                            </Typography>
+                        </span>
+                    </ButtonBase>
+                ))}
+            </div>
+        )
+    }
 }
 
 ButtonBases.propTypes = {

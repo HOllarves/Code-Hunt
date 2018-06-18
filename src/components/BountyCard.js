@@ -29,7 +29,6 @@ const styles = theme => ({
 class BountyCard extends React.Component {
     constructor(props) {
         super(props)
-        console.log(props)
         this.state = {
             repoUrl: this.props.data.repoUrl,
             issueID: this.props.data.issueID,
@@ -39,9 +38,9 @@ class BountyCard extends React.Component {
             finished: this.props.data.finished,
             accessToken: this.props.auth.token
         }
-        console.log(this.state)
+
         let requestObj = {}
-        if(this.props.access_token) {
+        if (this.props.access_token) {
             requestObj.access_token = this.props.access_token
         } else {
             let credentials = require('../secrets/credential')
@@ -50,11 +49,13 @@ class BountyCard extends React.Component {
         }
         var gh = new Github(requestObj)
         var user = gh.getUser()
-        var repo = gh.getRepo('HOllarves', 'Ethereum-Test-Repo')
-        repo.getPullRequest(2)
-            .then(data => { console.log(data)})
+        var repoName = this.state.repoUrl.split('/')
+        var repoUser = repoName[repoName.length - 2]
+        repoName = repoName[repoName.length - 1]
+        var repo = gh.getRepo(repoUser, repoName)
+        repo.getPullRequest(this.state.issueID)
+            .then(data => { console.log(data) })
     }
-
 
     render() {
         const { classes } = this.props

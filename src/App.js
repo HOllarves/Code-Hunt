@@ -47,8 +47,6 @@ class App extends Component {
       })
   }
 
-  compo
-
   instantiateContract() {
     const contract = require('truffle-contract')
     const huntContract = contract(HuntContract)
@@ -58,7 +56,7 @@ class App extends Component {
       else {
         this.setState({
           contractInstance: huntContract,
-          account: accounts[0],
+          account: accounts[0]
         })
       }
     })
@@ -86,15 +84,15 @@ class App extends Component {
 
   actionSelected(selection) {
     Promise.all([this.loadList(this.state.contractInstance), this.loadForm()])
-        .then(data => {
-          let bountyList = data[0],
+      .then(data => {
+        let bountyList = data[0],
           bountyForm = data[1]
-          this.setState({
-            bountyList: bountyList,
-            currentAction: selection,
-            bountyForm: bountyForm
-          })
+        this.setState({
+          bountyList: bountyList,
+          currentAction: selection,
+          bountyForm: bountyForm
         })
+      })
   }
 
   async loadList(contract) {
@@ -129,11 +127,11 @@ class App extends Component {
           })
           return stateBounties
         }
-    })
+      })
   }
 
-    loadForm() {
-      return (<Grid
+  loadForm() {
+    return (<Grid
       container
       spacing={16}
       justify={'center'}
@@ -144,7 +142,7 @@ class App extends Component {
         <Form newBounty={this.addBounty.bind(this)} />
       </Grid>
     </Grid>)
-    }
+  }
 
   render() {
     return (
@@ -169,7 +167,7 @@ class App extends Component {
           spacing={24}
           direction='row'
           justify='center'>
-            {this.state.currentAction === "list" && this.state.bountyList}
+          {this.state.currentAction === "list" && this.state.bountyList}
         </Grid>
         <ToastContainer />
       </div>
