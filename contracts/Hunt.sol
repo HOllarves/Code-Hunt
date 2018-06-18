@@ -15,6 +15,7 @@ contract Hunt is Ownable {
         uint256 prize;
         uint256 duration;
         uint256 createdOn;
+        uint256 expiresOn;
         bool finished;
         bool exists;
         address fixedBy;
@@ -30,7 +31,7 @@ contract Hunt is Ownable {
     mapping(address => uint) public balances;
     
     constructor() public { }
-    
+
     event fixSubmitted(address bountyAddr);
     
     event fixAccepted(address bountyAddr, address hunterAddr);
@@ -44,9 +45,10 @@ contract Hunt is Ownable {
     @param duration Duration in milliseconds
     */
     function createBounty(string memory repo, string memory username, uint issue, uint256 duration) public payable {
-        assert(msg.value > 0);
-        assert(duration > 0);
+        require(msg.value > 0);
+        require(duration > 0);
         require(avBounties[msg.sender].exists != true);
+
         avBounties[msg.sender].repoUrl = repo;
         avBounties[msg.sender].username = username;
         avBounties[msg.sender].issueID = issue;
@@ -54,6 +56,7 @@ contract Hunt is Ownable {
         avBounties[msg.sender].duration = duration;
         avBounties[msg.sender].createdOn = now;
         avBounties[msg.sender].exists = true;
+        avBounties[msg.sender].expiresOn = avBounties[msg.sender].createdOn.add(avBounties[msg.sender].duration);
         bounties.push(msg.sender);
     }
     
@@ -62,15 +65,15 @@ contract Hunt is Ownable {
     @param bountyAddr Bounty Address
     @param prID Pull Request's ID
     */
-    function submitHunt(address bountyAddr, uint prID) public view returns(bool) {
-        assert(avBounties[bountyAddr].exists == true);
+    function submitHunt(address bountyAddr, uint prID) public returns(bool) {
+        require(avBounties[bountyAddr].exists == true);
         assert(avBounties[bountyAddr].createdOn > 0);
         assert(avBounties[bountyAddr].duration > 0);
-        // assert(avBounties[bountyAddr].createdOn.add(avBounties[bountyAddr].duration) <= now);
+        assert(avBounties[bountyAddr].expiresOn > now);
         assert(avBounties[bountyAddr].finished != true);
 
         submissions[msg.sender].clientAddr = bountyAddr;
-        submissions[msg.sender].prID  = prID;
+        submissions[msg.sender].prID = prID;
         submissions[msg.sender].accepted = false;
 
         emit fixSubmitted(bountyAddr);
@@ -83,28 +86,35 @@ contract Hunt is Ownable {
     @param subAddr Submission address (Same as submitter)
     @param bountyAddr Bounty address
     */
-    function acceptHunt(address subAddr, address bountyAddr) public view returns(bool) {
+    function acceptHunt(address subAddr, address bountyAddr) public returns(bool) {
         assert(submissions[subAddr].accepted != true);
         assert(avBounties[bountyAddr].exists == true);
-        // assert(avBounties[bountyAddr].createdOn.add(avBounties[bountyAddr].duration) <= now);
+        assert(avBounties[bountyAddr].expiresOn > now);
         assert(avBounties[bountyAddr].finished != true);
-        
+        assert(msg.sender == bountyAddr);
+
         avBounties[bountyAddr].fixedBy = subAddr;
         avBounties[bountyAddr].finished = true;
         submissions[subAddr].accepted = true;
+        balances[subAddr] += avBounties[bountyAddr].prize;
+
         emit fixAccepted(bountyAddr, subAddr);
-        subAddr.transfer(avBounties[bountyAddr].prize);
         return true;
     }
+
+    function 
     
     /**
     @dev Cancels a bounty if not expired or finished
     */
-    function cancelBounty() public view returns(bool) {
+    function cancelBounty() public returns(bool) {
         require(avBounties[msg.sender].exists == true);
         assert(avBounties[msg.sender].finished != true);
-        // assert((avBounties[msg.sender].createdOn + avBounties[msg.sender].duration) < now);
+        assert(avBounties[msg.sender].expiresOn > now);
+
         avBounties[msg.sender].finished = true;
+        balances[msg.sender] += avBounties[msg.sender].prize;
+
         return true;
     }
     
@@ -113,12 +123,19 @@ contract Hunt is Ownable {
     @param bountyAddr Bounty address.
     */
     function bountyHasExpired(address bountyAddr) public onlyOwner() {
-        assert(avBounties[bountyAddr].createdOn.add(avBounties[bountyAddr].duration) <= now);
+        assert(avBounties[bountyAddr].expiresOn < now);
         avBounties[bountyAddr].finished = true;
     }
-    
+    /**
+    Returns a list of all bounties post by all addresses.
+    */
+    function getBounties() public view returns (address[]) {
+        return bounties;
+    }
+
     /**
     @dev Returns a Repo URL
+    @param bountyAddr Bounty address.
     */
     function getBounty(address bountyAddr) public view returns 
         (string, string, uint,
@@ -132,12 +149,6 @@ contract Hunt is Ownable {
         avBounties[bountyAddr].finished);
     }
     
-    /**
-    Returns a list of all bounties post by all addresses.
-    */
-    function getBounties() public view returns (address[]) {
-        return bounties;
-    }
     
     /**
     @dev Returns a specificied issue of a registered repository
@@ -145,7 +156,7 @@ contract Hunt is Ownable {
     */
     function getBountyIssue(address bountyAddr) public view returns (uint) {
         assert(avBounties[bountyAddr].exists == true);
-        // assert(avBounties[bountyAddr].createdOn.add(avBounties[bountyAddr].duration) <= now);
+        assert(avBounties[bountyAddr].expiresOn > now);
         return avBounties[bountyAddr].issueID;
     }
     
@@ -154,8 +165,19 @@ contract Hunt is Ownable {
     @param bountyAddr Bounty address.
     */
     function getBountyReward(address bountyAddr) public view returns (uint) {
-        // require(avBounties[bountyAddr].exists == true);
-        // assert(avBounties[bountyAddr].createdOn.add(avBounties[bountyAddr].duration) <= now);
+        require(avBounties[bountyAddr].exists == true);
+        assert(avBounties[bountyAddr].expiresOn > now);
         return avBounties[bountyAddr].prize;
     }
+
+    /**
+    @dev Withdraws user's available funds
+     */
+    function withdrawFunds() public {
+        assert(balances[msg.sender] > 0);
+        balances[msg.sender] = 0;
+        msg.sender.transfer(balances[msg.sender]);
+    }
+
+    function() public payable { }
 }
