@@ -101,8 +101,6 @@ contract Hunt is Ownable {
         emit fixAccepted(bountyAddr, subAddr);
         return true;
     }
-
-    function 
     
     /**
     @dev Cancels a bounty if not expired or finished

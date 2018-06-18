@@ -32,6 +32,8 @@ class ButtonAppBar extends React.Component {
   onSuccess(response) {
     this.githubHandler.sendUserCode(response.code)
       .then(response => {
+        var gh = new Github({ access_token: response.access_token })
+        console.log(gh)
         this.props.loadAccessToken(response.access_token)
       })
   }

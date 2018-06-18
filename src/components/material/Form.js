@@ -2,8 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 import TextField from '@material-ui/core/TextField'
-import Button from '@material-ui/core/Button';
+import Button from '@material-ui/core/Button'
 import validator from 'validator'
+import toast from 'react-toastify'
 
 const styles = theme => ({
     container: {
@@ -33,18 +34,28 @@ class Form extends React.Component {
             issueID: { value: '', valid: true },
             prize: { value: '', valid: true },
             duration: { value: '', valid: true },
+            username: { value: '', valid: true }
         }
     }
 
     submitForm(e) {
         e.preventDefault()
-        let newBounty = {
-            repoUrl: this.state.repoUrl.value,
-            issueID: parseInt(this.state.issueID.value),
-            prize: parseFloat(this.state.prize.value),
-            duration: parseInt(this.state.duration.value)
+        if (this.state.repoUrl.value
+            && this.state.username.value
+            && this.state.issueID.value
+            && this.state.prize.value
+            && this.state.duration.value) {
+            let newBounty = {
+                repoUrl: this.state.repoUrl.value,
+                issueID: parseInt(this.state.issueID.value),
+                prize: parseFloat(this.state.prize.value),
+                duration: parseInt(this.state.duration.value)
+            }
+            this.props.newBounty(newBounty)
+        } else {
+            toast.error("Oops! Invalid form.")
         }
-        this.props.newBounty(newBounty)
+
     }
 
     handleChange = name => event => {
@@ -59,6 +70,10 @@ class Form extends React.Component {
         if (name === "issueID") {
             newState.value = event.target.value
             newState.valid = validator.isInt(event.target.value)
+        }
+        if (name === "userName") {
+            newState.value = event.target.value
+            newState.valid = validator.isLength(event.target.value, { min: 2 })
         }
         if (name === "prize") {
             newState.value = event.target.value
@@ -84,7 +99,7 @@ class Form extends React.Component {
         Object.keys(this.state).map(key => {
             if (!this.state[key].value) { submit = false }
         })
-        
+
         return (
             <form className={classes.container} onSubmit={this.submitForm.bind(this)} noValidate autoComplete="off">
                 <TextField
@@ -98,6 +113,18 @@ class Form extends React.Component {
                     {...(!this.state.repoUrl.valid && { error })}
                     value={this.state.repoUrl.value}
                     onChange={this.handleChange('repoUrl')}
+                    margin="normal"
+                />
+                <TextField
+                    id="UserName"
+                    label="Username"
+                    InputLabelProps={{
+                        shrink: true,
+                    }}
+                    fullWidth
+                    {...(!this.state.repoUrl.valid && { error })}
+                    value={this.state.repoUrl.value}
+                    onChange={this.handleChange('userName')}
                     margin="normal"
                 />
                 <TextField

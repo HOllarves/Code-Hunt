@@ -95,6 +95,10 @@ class App extends Component {
       })
   }
 
+  loadUserInfo() {
+
+  }
+
   async loadList(contract) {
     let contractInstance
     return contract.deployed()
