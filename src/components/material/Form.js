@@ -47,9 +47,9 @@ class Form extends React.Component {
             && this.state.duration.value) {
             let newBounty = {
                 repoUrl: this.state.repoUrl.value,
-                issueID: parseInt(this.state.issueID.value),
-                prize: parseFloat(this.state.prize.value),
-                duration: parseInt(this.state.duration.value)
+                issueID: parseInt(this.state.issueID.value, 10),
+                prize: parseFloat(this.state.prize.value, 10),
+                duration: parseInt(this.state.duration.value, 10)
             }
             this.props.newBounty(newBounty)
         } else {
@@ -93,11 +93,13 @@ class Form extends React.Component {
         const { classes } = this.props
 
         let error = true,
-            submit = true,
+            canSubmit = true,
             submitButton = <Button variant="contained" type="submit" color="primary" className={classes.button}> Submit </Button>
 
         Object.keys(this.state).map(key => {
-            if (!this.state[key].value) { submit = false }
+            if (!this.state[key].value) { canSubmit = false }
+            return true
+
         })
 
         return (
@@ -154,7 +156,7 @@ class Form extends React.Component {
                     className={classes.textField}
                     margin="normal"
                 />
-                {submit ? submitButton : null}
+                {canSubmit ? submitButton : null}
             </form>
         )
     }

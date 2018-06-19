@@ -6,7 +6,6 @@ import CardActions from '@material-ui/core/CardActions'
 import CardContent from '@material-ui/core/CardContent'
 import Button from '@material-ui/core/Button'
 import Typography from '@material-ui/core/Typography'
-import Github from 'github-api'
 
 const styles = theme => ({
     card: {
@@ -28,6 +27,7 @@ const styles = theme => ({
 
 class BountyCard extends React.Component {
     constructor(props) {
+
         super(props)
         this.state = {
             repoUrl: this.props.data.repoUrl,
@@ -47,19 +47,10 @@ class BountyCard extends React.Component {
             requestObj.username = credentials.username
             requestObj.password = credentials.password
         }
-        var gh = new Github(requestObj)
-        var user = gh.getUser()
-        var repoName = this.state.repoUrl.split('/')
-        var repoUser = repoName[repoName.length - 2]
-        repoName = repoName[repoName.length - 1]
-        var repo = gh.getRepo(repoUser, repoName)
-        repo.getPullRequest(this.state.issueID)
-            .then(data => { console.log(data) })
     }
 
     render() {
         const { classes } = this.props
-        const bull = <span className={classes.bullet}>•</span>
         return (
             <div>
                 <Card className={classes.card}>

@@ -94,13 +94,9 @@ const images = [
 
 class ButtonBases extends React.Component {
 
-    constructor(props) {
-        super(props)
-    }
-
     optionSelected(selection) {
-        selection === "Bounties" ? selection = "list" : null
-        selection === "Create new bounty" ? selection = "add" : null
+        selection === "Bounties" ? selection = "list" : selection = null
+        selection === "Create new bounty" ? selection = "add" : selection = null
         this.props.onSelect(selection)
     }
 

@@ -4,11 +4,11 @@ import { withStyles } from '@material-ui/core/styles'
 import AppBar from '@material-ui/core/AppBar'
 import Toolbar from '@material-ui/core/Toolbar'
 import Typography from '@material-ui/core/Typography'
-import IconButton from '@material-ui/core/IconButton'
-import MenuIcon from '@material-ui/icons/Menu'
 import GitHubLogin from 'react-github-login'
 import * as secret from '../../oauth/secret'
 import Github from '../../services/github'
+import Octokit from '@octokit/rest'
+import LeftDrawer from './Drawer'
 
 const styles = theme => ({
   root: {
@@ -16,29 +16,67 @@ const styles = theme => ({
   },
   flex: {
     flex: 1,
-  },
-  menuButton: {
-    marginLeft: -12,
-    marginRight: 20,
-  },
+  }
 });
 
 class ButtonAppBar extends React.Component {
   constructor(props) {
     super(props)
+    this.isLoggedIn = false;
     this.githubHandler = new Github()
+    this.octokit = new Octokit({ headers: { accept: 'application/vnd.github.v3+json', 'user-agent': 'octokit/rest.js v1.2.3' } })
+    this.localStorageLabel = 'user-app-bar'
+    this.state = {
+      userName: '',
+      pic: '',
+      access_token: ''
+    }
+  }
+
+  componentDidMount() {
+    const storedData = JSON.parse(localStorage.getItem(this.localStorageLabel))
+    if (storedData) {
+      this.isLoggedIn = true
+      this.loadUserInfo(storedData)
+    }
   }
 
   onSuccess(response) {
     this.githubHandler.sendUserCode(response.code)
-      .then(response => {
-        var gh = new Github({ access_token: response.access_token })
-        console.log(gh)
-        this.props.loadAccessToken(response.access_token)
+      .then(githubResponse => {
+        this.octokit.authenticate({ type: 'oauth', token: githubResponse.access_token })
+        this.octokit.users.get({})
+          .then(userRespose => {
+            let userData = {
+              userName: userRespose.data.login,
+              pic: userRespose.data.avatar_url,
+              access_token: githubResponse.access_token
+            }
+            this.loadUserInfo(userData, githubResponse.access_token)
+            this.props.loadAccessToken(githubResponse.access_token)
+          })
       })
   }
 
-  onFailure(response) { console.log(response) }
+  loadUserInfo(user, access_token) {
+    this.octokit.authenticate({ type: 'oauth', token: access_token ? access_token : user.access_token })
+    this.octokit.users.get({})
+      .then(userRespose => {
+        let userData = {
+          userName: userRespose.data.login,
+          pic: userRespose.data.avatar_url,
+          access_token: access_token ? access_token : user.access_token
+        }
+        this.isLoggedIn = true
+        localStorage.setItem(this.localStorageLabel, JSON.stringify(userData))
+        this.setState(userData)
+      })
+      .catch(err => {
+        this.isLoggedIn = false;
+      })
+  }
+
+  onFailure(response) { this.isLoggedIn = false }
 
   render() {
     const { classes } = this.props;
@@ -46,17 +84,16 @@ class ButtonAppBar extends React.Component {
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
-            <IconButton className={classes.menuButton} color="inherit" aria-label="Menu">
-              <MenuIcon />
-            </IconButton>
+            <LeftDrawer />
+
             <Typography variant="title" color="inherit" className={classes.flex}>
               Code Hunt
             </Typography>
-            <GitHubLogin clientId={secret.default.id}
+            {!this.isLoggedIn ? <GitHubLogin clientId={secret.default.id}
               onSuccess={this.onSuccess.bind(this)}
               onFailure={this.onFailure.bind(this)}
               redirectUri=''
-              className="github-btn" />
+              className="github-btn" /> : null}
           </Toolbar>
         </AppBar>
       </div>

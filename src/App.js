@@ -5,7 +5,6 @@ import './App.css'
 
 //Materialize components
 import ButtonAppBar from './components/material/AppBar'
-import Paper from './components/material/Paper'
 import ButtonBases from './components/material/ButtonBases'
 import Form from './components/material/Form'
 import Grid from '@material-ui/core/Grid'
@@ -159,10 +158,10 @@ class App extends Component {
             <ButtonAppBar loadAccessToken={this.loadToken.bind(this)} />
           </Grid>
           <Grid item xs={8}>
-            <Paper />
-          </Grid>
-          <Grid item xs={8}>
             <ButtonBases onSelect={this.actionSelected.bind(this)} />
+          </Grid>
+          <Grid item xs={12}>
+            <hr />
           </Grid>
         </Grid>
         {this.state.currentAction === "add" && this.state.bountyForm}
