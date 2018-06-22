@@ -66,7 +66,7 @@ class App extends Component {
     delete newBounty.prize
     this.state.contractInstance.deployed()
       .then(instance => {
-        instance.createBounty.sendTransaction(newBounty.repoUrl, newBounty.issueID, newBounty.duration, { from: this.state.account, value: bountyPrize })
+        instance.createBounty.sendTransaction(newBounty.repoUrl, newBounty.userName, newBounty.issueID, newBounty.duration, { from: this.state.account, value: bountyPrize })
           .then(() => {
             toast.success("Bounty added", { position: toast.POSITION.BOTTOM_CENTER })
           })
@@ -119,12 +119,13 @@ class App extends Component {
           let stateBounties = []
           loadedBounties.forEach((val, idx) => {
             let bounty = {
-              repoUrl: val[0],
-              issueID: val[1].c[0],
-              prize: val[2].c[0],
-              duration: val[3].c[0],
-              createdOn: val[4].c[0],
-              finsihed: val[5]
+              userName: val[0],
+              repoUrl: val[1],
+              issueID: val[2].c[0],
+              prize: val[3].c[0],
+              duration: val[4].c[0],
+              createdOn: val[5].c[0],
+              finsihed: val[6]
             }
             stateBounties.push(<Grid item xs={4} key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
           })
