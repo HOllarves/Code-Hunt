@@ -5,8 +5,6 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract Hunt is Ownable {
     
     using SafeMath for uint;
-  
-    address[] public bounties;
 
     struct Bounty {
         string repoUrl;
@@ -18,154 +16,164 @@ contract Hunt is Ownable {
         uint256 expiresOn;
         bool finished;
         bool exists;
-        address fixedBy;
-    }
-    struct Submission {
-        address clientAddr;
-        uint prID;
-        bool accepted;
+        bytes32 fixedBy;
     }
 
-    mapping(address => Bounty) public avBounties;
-    mapping(address => Submission) public submissions;
+    struct Submission {
+        bytes32 bountyId;
+        uint prId;
+        bool accepted;
+        bool exists;
+    }
+
+    mapping(address => bytes32[]) public bountyCreators;
+    mapping(address => bytes32[]) public submissionCreators;
+    mapping(bytes32 => Bounty) public bounties;
+    mapping(bytes32 => Submission) public submissions;
     mapping(address => uint) public balances;
+    mapping(bytes32 => address) private bountyAddresses;
+    mapping(bytes32 => address) private submissionAddresses;
+    
+    bytes32[] public allBounties;
+    bytes32[] public allSubmissions;
     
     constructor() public { }
 
-    event fixSubmitted(address bountyAddr);
-    
-    event fixAccepted(address bountyAddr, address hunterAddr);
-    
-    event fixDenied(address bountyAddr);
+    event fixSubmitted(bytes32 bountyId, bytes32 subId);
+    event fixAccepted(bytes32 bountyId, bytes32 subId);
     
     /**
-    @dev Creates a new bounty to be solved by the users
-    @param repo Repository URL
-    @param issue Issue ID
-    @param duration Duration in milliseconds
+    @dev Creates a new bounty to be solved by the users.
+    @param repo Repository URL.
+    @param username Github username.
+    @param issue Issue ID.
+    @param duration Duration in seconds.
     */
-    function createBounty(string memory repo, string memory username, uint issue, uint256 duration) public payable {
+    function createBounty(string memory repo, string memory username, uint issue, uint256 duration) public payable returns(bytes32) {
         require(msg.value > 0);
         require(duration > 0);
-        require(avBounties[msg.sender].exists != true);
-
-        avBounties[msg.sender].repoUrl = repo;
-        avBounties[msg.sender].username = username;
-        avBounties[msg.sender].issueID = issue;
-        avBounties[msg.sender].prize = msg.value;
-        avBounties[msg.sender].duration = duration;
-        avBounties[msg.sender].createdOn = now;
-        avBounties[msg.sender].exists = true;
-        avBounties[msg.sender].expiresOn = avBounties[msg.sender].createdOn.add(avBounties[msg.sender].duration);
-        bounties.push(msg.sender);
+        bytes32 bountyId = keccak256(abi.encodePacked(username, repo, issue, msg.sender));
+        require(bounties[bountyId].exists != true);
+        bountyCreators[msg.sender].push(bountyId);
+        bounties[bountyId] = Bounty(repo, username, issue, msg.value,  duration, now,  now.add(duration), false, true, 0);
+        bountyAddresses[bountyId] = msg.sender;
+        allBounties.push(bountyId);
+        return bountyId;
     }
     
     /**
-    @dev Submits de Pull Request URL of the submission
-    @param bountyAddr Bounty Address
-    @param prID Pull Request's ID
+    @dev Submits de Pull Request URL of the submission.
+    @param bountyId Bounty's unique id.
+    @param prId Pull Request's ID.
     */
-    function submitHunt(address bountyAddr, uint prID) public returns(bool) {
-        require(avBounties[bountyAddr].exists == true);
-        assert(avBounties[bountyAddr].createdOn > 0);
-        assert(avBounties[bountyAddr].duration > 0);
-        assert(avBounties[bountyAddr].expiresOn > now);
-        assert(avBounties[bountyAddr].finished != true);
+    function submitHunt(bytes32 bountyId, uint prId) public returns(bytes32) {
 
-        submissions[msg.sender].clientAddr = bountyAddr;
-        submissions[msg.sender].prID = prID;
-        submissions[msg.sender].accepted = false;
+        require(bounties[bountyId].exists == true);
+        assert(bounties[bountyId].expiresOn > now);
+        assert(bounties[bountyId].finished != true);
 
-        emit fixSubmitted(bountyAddr);
+        bytes32 subId = keccak256(abi.encodePacked(bountyId, prId, msg.sender));
+        require(submissions[subId].exists != true);
 
+        submissionCreators[msg.sender].push(subId);
+        submissions[subId] = Submission(subId, prId, false, true);
+        submissionAddresses[subId] = msg.sender;
+        allSubmissions.push(subId);
+        
+        emit fixSubmitted(bountyId, subId);
+        return subId;
+    }
+    
+    /**
+    @dev Marks a submission as accepted.
+    @param subId Submission's unique id.
+    @param bountyId Bounty's unique id.
+    */
+    function acceptHunt(bytes32 subId, bytes32 bountyId) public returns(bool) {
+
+        assert(submissions[subId].exists == true);
+        assert(submissions[subId].accepted != true);
+        assert(bounties[bountyId].exists == true);
+        assert(bounties[bountyId].expiresOn > now);
+        assert(bounties[bountyId].finished != true);
+
+        address owner = bountyAddresses[bountyId];
+        assert(msg.sender == owner);
+        address submitter = submissionAddresses[subId];
+
+        bounties[bountyId].fixedBy = subId;
+        bounties[bountyId].finished = true;
+        submissions[subId].accepted = true;
+        balances[submitter] += bounties[bountyId].prize;
+        emit fixAccepted(bountyId, subId);
         return true;
     }
     
     /**
-    @dev Marks a submission as accepted
-    @param subAddr Submission address (Same as submitter)
-    @param bountyAddr Bounty address
+    @dev Cancels a bounty if not expired or finished.
+    @param bountyId Bounty's unique id.
     */
-    function acceptHunt(address subAddr, address bountyAddr) public returns(bool) {
-        assert(submissions[subAddr].accepted != true);
-        assert(avBounties[bountyAddr].exists == true);
-        assert(avBounties[bountyAddr].expiresOn > now);
-        assert(avBounties[bountyAddr].finished != true);
-        assert(msg.sender == bountyAddr);
-
-        avBounties[bountyAddr].fixedBy = subAddr;
-        avBounties[bountyAddr].finished = true;
-        submissions[subAddr].accepted = true;
-        balances[subAddr] += avBounties[bountyAddr].prize;
-
-        emit fixAccepted(bountyAddr, subAddr);
-        return true;
-    }
-    
-    /**
-    @dev Cancels a bounty if not expired or finished
-    */
-    function cancelBounty() public returns(bool) {
-        require(avBounties[msg.sender].exists == true);
-        assert(avBounties[msg.sender].finished != true);
-        assert(avBounties[msg.sender].expiresOn > now);
-
-        avBounties[msg.sender].finished = true;
-        balances[msg.sender] += avBounties[msg.sender].prize;
-
+    function cancelBounty(bytes32 bountyId) public returns(bool) {
+        address owner = bountyAddresses[bountyId];
+        assert(owner == msg.sender);
+        require(bounties[bountyId].exists == true);
+        assert(bounties[bountyId].finished != true);
+        assert(bounties[bountyId].expiresOn > now);
+        bounties[bountyId].finished = true;
+        balances[msg.sender] += bounties[bountyId].prize;
         return true;
     }
     
     /**
     @dev Checks if a bounty has expired, if so the bounty is finished.
-    @param bountyAddr Bounty address.
+    @param bountyId Bounty's unique id.
     */
-    function bountyHasExpired(address bountyAddr) public onlyOwner() {
-        assert(avBounties[bountyAddr].expiresOn < now);
-        avBounties[bountyAddr].finished = true;
+    function bountyHasExpired(bytes32 bountyId) public onlyOwner() {
+        assert(bounties[bountyId].expiresOn < now);
+        bounties[bountyId].finished = true;
     }
     /**
     Returns a list of all bounties post by all addresses.
     */
-    function getBounties() public view returns (address[]) {
-        return bounties;
+    function getBounties() public view returns (bytes32[]) {
+        return allBounties;
     }
 
     /**
     @dev Returns a Repo URL
-    @param bountyAddr Bounty address.
+    @param bountyId Bounty's unique id.
     */
-    function getBounty(address bountyAddr) public view returns 
+    function getBounty(bytes32 bountyId) public view returns 
         (string, string, uint,
         uint, uint, uint, bool) {
     
-        assert(avBounties[bountyAddr].exists == true);
+        assert(bounties[bountyId].exists == true);
         
         return 
-        (avBounties[bountyAddr].username, avBounties[bountyAddr].repoUrl, avBounties[bountyAddr].issueID, 
-        avBounties[bountyAddr].prize, avBounties[bountyAddr].duration, avBounties[bountyAddr].createdOn,
-        avBounties[bountyAddr].finished);
+        (bounties[bountyId].username, bounties[bountyId].repoUrl, bounties[bountyId].issueID, 
+        bounties[bountyId].prize, bounties[bountyId].duration, bounties[bountyId].createdOn,
+        bounties[bountyId].finished);
     }
     
     
     /**
     @dev Returns a specificied issue of a registered repository
-    @param bountyAddr Bounty address.
+    @param bountyId Bounty's unique id.
     */
-    function getBountyIssue(address bountyAddr) public view returns (uint) {
-        assert(avBounties[bountyAddr].exists == true);
-        assert(avBounties[bountyAddr].expiresOn > now);
-        return avBounties[bountyAddr].issueID;
+    function getBountyIssue(bytes32 bountyId) public view returns (uint) {
+        assert(bounties[bountyId].exists == true);
+        assert(bounties[bountyId].expiresOn > now);
+        return bounties[bountyId].issueID;
     }
     
     /**
     @dev Returns a specific bounty's reward
-    @param bountyAddr Bounty address.
+    @param bountyId Bounty's unique id.
     */
-    function getBountyReward(address bountyAddr) public view returns (uint) {
-        require(avBounties[bountyAddr].exists == true);
-        assert(avBounties[bountyAddr].expiresOn > now);
-        return avBounties[bountyAddr].prize;
+    function getBountyReward(bytes32 bountyId) public view returns (uint) {
+        require(bounties[bountyId].exists == true);
+        assert(bounties[bountyId].expiresOn > now);
+        return bounties[bountyId].prize;
     }
 
     /**
@@ -173,8 +181,8 @@ contract Hunt is Ownable {
      */
     function withdrawFunds() public {
         assert(balances[msg.sender] > 0);
-        balances[msg.sender] = 0;
         msg.sender.transfer(balances[msg.sender]);
+        balances[msg.sender] = 0;
     }
 
     function() public payable { }
