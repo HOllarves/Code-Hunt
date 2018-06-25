@@ -46,6 +46,9 @@ class App extends Component {
       })
   }
 
+  /**
+   * Instantiates contract and saves it in state
+   */
   instantiateContract() {
     const contract = require('truffle-contract')
     const huntContract = contract(HuntContract)
@@ -61,6 +64,15 @@ class App extends Component {
     })
   }
 
+  /**
+   * Adds new bounty to the blockchain
+   * @param {Object} newBounty - The new bounty to be added
+   * newBounty:
+   *  - repoUrl: string
+   *  - userName: string,
+   *  - issueId: number,
+   *  - duration: number,
+   */
   addBounty(newBounty) {
     let bountyPrize = newBounty.prize * 1000000000000000000
     delete newBounty.prize
@@ -77,10 +89,19 @@ class App extends Component {
       })
   }
 
+  /**
+   * Saves oauth token to state variable
+   * @param {string} token 
+   */
   loadToken(token) {
     this.setState({ accessToken: token })
   }
 
+  /**
+   * Reloads form and available bounties
+   * whenever a new action is selected.
+   * @param {string} selection 
+   */
   actionSelected(selection) {
     Promise.all([this.loadList(this.state.contractInstance), this.loadForm()])
       .then(data => {
@@ -98,6 +119,10 @@ class App extends Component {
 
   }
 
+  /**
+   * Asynchronously loads the list of available bounties.
+   * @param {object} contract - Contract instance 
+   */
   async loadList(contract) {
     let contractInstance
     return contract.deployed()
@@ -127,13 +152,17 @@ class App extends Component {
               createdOn: val[5].c[0],
               finsihed: val[6]
             }
-            stateBounties.push(<Grid item xs={4} key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
+            if (!bounty.finsihed)
+              stateBounties.push(<Grid item xs={4} key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
           })
           return stateBounties
         }
       })
   }
 
+  /**
+   * Returns new bounty form
+   */
   loadForm() {
     return (<Grid
       container
@@ -148,6 +177,7 @@ class App extends Component {
     </Grid>)
   }
 
+  // Render function
   render() {
     return (
       <div className="App">
@@ -165,12 +195,12 @@ class App extends Component {
             <hr />
           </Grid>
         </Grid>
-        {this.state.currentAction === "add" && this.state.bountyForm}
         <Grid
           container
           spacing={24}
           direction='row'
           justify='center'>
+          {this.state.currentAction === "add" && this.state.bountyForm}
           {this.state.currentAction === "list" && this.state.bountyList}
         </Grid>
         <ToastContainer />

@@ -6,6 +6,12 @@ import Button from '@material-ui/core/Button'
 import validator from 'validator'
 import Octokit from '@octokit/rest'
 import toast from 'react-toastify'
+import isGitUrl from 'is-git-url'
+import githubUrlParser from 'parse-github-url'
+import Grid from '@material-ui/core/Grid'
+import NextIcon from '@material-ui/icons/KeyboardArrowRight'
+import BackIcon from '@material-ui/icons/KeyboardArrowLeft'
+import RepoCard from '../RepoCard'
 
 const styles = theme => ({
     container: {
@@ -23,6 +29,9 @@ const styles = theme => ({
     },
     button: {
         margin: theme.spacing.unit,
+    },
+    bountyCardTitle: {
+        textAlign: 'center'
     }
 })
 
@@ -31,25 +40,30 @@ class Form extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
-            repoUrl: { value: '', valid: true },
-            issueID: { value: '', valid: true },
-            prize: { value: '', valid: true },
-            duration: { value: '', valid: true },
-            userName: { value: '', valid: true }
+            repoUrl: { value: '', valid: false },
+            issueID: { value: '', valid: false },
+            prize: { value: '', valid: false },
+            duration: { value: '', valid: false },
+            selectedRepo: {},
+            selectedIssue: {},
+            repoOwner: '',
+            wizIndex: 0,
+            ghParsedObj: {},
+            loadRepoCard: false
         }
+        this.loadRepoCard = false;
         this.octokit = new Octokit({ headers: { accept: 'application/vnd.github.v3+json', 'user-agent': 'octokit/rest.js v1.2.3' } })
     }
 
-    submitForm(e) {
-        e.preventDefault()
+    submitForm() {
         if (this.state.repoUrl.value
-            && this.state.userName.value
+            && this.state.ghParsedObj.owner
             && this.state.issueID.value
             && this.state.prize.value
             && this.state.duration.value) {
             let newBounty = {
                 repoUrl: this.state.repoUrl.value,
-                userName: this.state.userName.value,
+                userName: this.state.ghParsedObj.owner,
                 issueID: parseInt(this.state.issueID.value, 10),
                 prize: parseFloat(this.state.prize.value, 10),
                 duration: parseInt(this.state.duration.value, 10)
@@ -60,27 +74,78 @@ class Form extends React.Component {
         }
     }
 
+    next() {
+        console.log(this.state)
+        if (this.state.wizIndex === 0 && this.state.repoUrl.valid) {
+            let ghObject = githubUrlParser(this.state.repoUrl.value)
+            if (ghObject
+                && ghObject.owner
+                && ghObject.name
+                && ghObject.repo) {
+                this.octokit.repos.get({ owner: ghObject.owner, repo: ghObject.name })
+                    .then(response => {
+                        if (response && response.data) {
+                            this.selectIssue = true;
+                            this.setState({
+                                selectedRepo: response.data,
+                                repoOwner: ghObject.owner,
+                                wizIndex: ++this.state.wizIndex,
+                                ghParsedObj: ghObject,
+                                loadRepoCard: true
+                            })
+                        }
+                    })
+                    .catch(error => {
+                        // Error display
+                        console.log(error)
+                    })
+            }
+
+        }
+
+        if (this.state.wizIndex === 1 && this.state.issueID.valid) {
+            this.octokit.issues.get({
+                owner: this.state.ghParsedObj.owner,
+                repo: this.state.ghParsedObj.name,
+                number: this.state.issueID.value
+            }).then(response => {
+                if (response
+                    && response.status === 200
+                    && response.data) {
+                    this.setState({ selectedIssue: response.data, wizIndex: ++this.state.wizIndex })
+                }
+            }).catch(error => {
+                // Error display
+                console.log(error)
+            })
+        }
+
+        if (this.state.wizIndex === 2 && this.state.prize.valid) {
+            this.setState({ wizIndex: ++this.state.wizIndex })
+        }
+
+        if (this.state.wizIndex === 3 && this.state.duration.valid) {
+            this.submitForm()
+        }
+    }
+
+    back() {
+        this.state.wizIndex > 0 ? this.setState({ wizIndex: --this.state.wizIndex }) : this.setState({ wizIndex: 0 })
+    }
+
     handleChange = name => event => {
         let newState = {
             value: '',
-            valid: null
+            valid: false
         }
         if (name === "repoUrl") {
             newState.value = event.target.value
-            newState.valid = validator.isURL(event.target.value)
-            if (newState.valid) {
-                // Get all info related to the repo
-            }
+            newState.valid = isGitUrl(event.target.value)
         }
         if (name === "issueID") {
             newState.value = event.target.value
             newState.valid = validator.isInt(event.target.value)
             // Get info on issue. If the issue exists load issue info.
-        }
-        if (name === "userName") {
-            newState.value = event.target.value
-            newState.valid = validator.isLength(event.target.value, { min: 2 })
-            // We could load user's avatar picture using octokit and show it somewhere
         }
         if (name === "prize") {
             newState.value = event.target.value
@@ -110,64 +175,89 @@ class Form extends React.Component {
         const { classes } = this.props
 
         let error = true,
-            canSubmit = true,
-            submitButton = <Button variant="contained" type="submit" color="primary" className={classes.button}> Submit </Button>
+            wizard = []
 
-        Object.keys(this.state).map(key => {
-            if (!this.state[key].value) { canSubmit = false }
-            return true
-        })
+        wizard[0] = <TextField
+            id="RepoUrl"
+            label="Repository URL"
+            InputLabelProps={{
+                shrink: true,
+            }}
+            placeholder="https://github.com/YourUsername/YourRepository.git"
+            fullWidth
+            {...(!this.state.repoUrl.valid && { error })}
+            value={this.state.repoUrl.value}
+            onChange={this.handleChange('repoUrl')}
+            margin="normal" />
+
+        wizard[1] = <TextField
+            id="IssueID"
+            label="IssueID"
+            {...(!this.state.issueID.valid && { error })}
+            className={classes.textField}
+            value={this.state.issueID.value}
+            onChange={this.handleChange('issueID')}
+            margin="normal" />
+
+        wizard[2] = <TextField
+            id="Prize"
+            label="Prize"
+            {...(!this.state.prize.valid && { error })}
+            className={classes.textField}
+            value={this.state.prize.value}
+            onChange={this.handleChange('prize')}
+            margin="normal" />
+
+        wizard[3] = <TextField
+            id="Duration"
+            label="duration"
+            {...(!this.state.duration.valid && { error })}
+            value={this.state.duration.value}
+            onChange={this.handleChange('duration')}
+            className={classes.textField}
+            margin="normal" />
+
+        let repoCardInfo = {
+            repoName: Object.keys(this.state.ghParsedObj).length !== 0 ? this.state.ghParsedObj.name : '',
+            userName: Object.keys(this.state.ghParsedObj).length !== 0 ? this.state.ghParsedObj.owner : '',
+            image: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.owner.avatar_url : '',
+            userLink: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.owner.html_url : '',
+            openIssues: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.open_issues_count : '',
+            description: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.description : ''
+        }
+
+        let repoCard =
+            <Grid container
+                spacing={24}
+                justify='center' >
+                <Grid item xs={6}>
+                    <h3 className={classes.bountyCardTitle}>My Bounty</h3>
+                    <RepoCard info={repoCardInfo} />
+                </Grid>
+            </Grid >
+
+        let selection =
+            <Grid
+                container
+                spacing={24}
+                direction='row'>
+                <Grid item xs={12}>
+                    <Button variant="contained" onClick={this.back.bind(this)} color="secondary" className={classes.button}>
+                        Back
+                        <BackIcon className={classes.button}>Back</BackIcon>
+                    </Button>
+                    <Button variant="contained" onClick={this.next.bind(this)} color="primary" className={classes.button}>
+                        Next
+                    <NextIcon className={classes.button}>Next</NextIcon>
+                    </Button>
+                </Grid>
+            </Grid>
 
         return (
-            <form className={classes.container} onSubmit={this.submitForm.bind(this)} noValidate autoComplete="off">
-                <TextField
-                    id="RepoUrl"
-                    label="Repository URL"
-                    InputLabelProps={{
-                        shrink: true,
-                    }}
-                    placeholder="https://github.com/YourUsername/YourRepository"
-                    fullWidth
-                    {...(!this.state.repoUrl.valid && { error })}
-                    value={this.state.repoUrl.value}
-                    onChange={this.handleChange('repoUrl')}
-                    margin="normal" />
-                <TextField
-                    id="UserName"
-                    label="Username"
-                    InputLabelProps={{
-                        shrink: true,
-                    }}
-                    fullWidth
-                    {...(!this.state.userName.valid && { error })}
-                    value={this.state.userName.value}
-                    onChange={this.handleChange('userName')}
-                    margin="normal" />
-                <TextField
-                    id="IssueID"
-                    label="IssueID"
-                    {...(!this.state.issueID.valid && { error })}
-                    className={classes.textField}
-                    value={this.state.issueID.value}
-                    onChange={this.handleChange('issueID')}
-                    margin="normal" />
-                <TextField
-                    id="Prize"
-                    label="Prize"
-                    {...(!this.state.prize.valid && { error })}
-                    className={classes.textField}
-                    value={this.state.prize.value}
-                    onChange={this.handleChange('prize')}
-                    margin="normal" />
-                <TextField
-                    id="Duration"
-                    label="duration"
-                    {...(!this.state.duration.valid && { error })}
-                    value={this.state.duration.value}
-                    onChange={this.handleChange('duration')}
-                    className={classes.textField}
-                    margin="normal" />
-                {canSubmit ? submitButton : null}
+            <form className={classes.container} noValidate autoComplete="off">
+                {wizard[this.state.wizIndex]}
+                {selection}
+                {this.state.loadRepoCard && repoCard}
             </form>
         )
     }
