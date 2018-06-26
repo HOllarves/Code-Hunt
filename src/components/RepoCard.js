@@ -51,11 +51,11 @@ class RepoCard extends React.Component {
                             {this.props.info.repoName}
                         </Typography>
                         <Typography component="p">
-                            <strong>Description:</strong>
+                            <strong>Description: </strong>
                             {this.props.info.description}
                         </Typography>
                         <Typography component="p">
-                            <strong>Open Issues:</strong>
+                            <strong>Open Issues: </strong>
                             {this.props.info.openIssues}
                         </Typography>
                     </CardContent>

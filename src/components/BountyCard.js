@@ -52,30 +52,28 @@ class BountyCard extends React.Component {
     render() {
         const { classes } = this.props
         return (
-            <div>
-                <Card className={classes.card}>
-                    <CardContent>
-                        <Typography className={classes.title} color="textSecondary">
-                            {this.state.repoUrl}
-                        </Typography>
-                        <Typography variant="headline" component="h2">
-                            {this.state.issueID}
-                        </Typography>
-                        <Typography className={classes.pos} color="textSecondary">
-                            {this.state.createdOn}
-                        </Typography>
-                        <Typography component="p">
-                            {this.state.prize}
-                        </Typography>
-                        <Typography component="p">
-                            {this.state.issueID}
-                        </Typography>
-                    </CardContent>
-                    <CardActions>
-                        <Button size="small">Accept!</Button>
-                    </CardActions>
-                </Card>
-            </div>
+            <Card className={classes.card}>
+                <CardContent>
+                    <Typography className={classes.title} color="textSecondary">
+                        {this.state.repoUrl}
+                    </Typography>
+                    <Typography variant="headline" component="h2">
+                        {this.state.issueID}
+                    </Typography>
+                    <Typography className={classes.pos} color="textSecondary">
+                        {this.state.createdOn}
+                    </Typography>
+                    <Typography component="p">
+                        {this.state.prize}
+                    </Typography>
+                    <Typography component="p">
+                        {this.state.issueID}
+                    </Typography>
+                </CardContent>
+                <CardActions>
+                    <Button size="small">Accept!</Button>
+                </CardActions>
+            </Card>
         )
     }
 }

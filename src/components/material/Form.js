@@ -1,17 +1,25 @@
+//React
 import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
+
+//Materialize
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
+import NextIcon from '@material-ui/icons/KeyboardArrowRight'
+import BackIcon from '@material-ui/icons/KeyboardArrowLeft'
+import Grid from '@material-ui/core/Grid'
+
+//3rd party libs
 import validator from 'validator'
 import Octokit from '@octokit/rest'
 import toast from 'react-toastify'
 import isGitUrl from 'is-git-url'
 import githubUrlParser from 'parse-github-url'
-import Grid from '@material-ui/core/Grid'
-import NextIcon from '@material-ui/icons/KeyboardArrowRight'
-import BackIcon from '@material-ui/icons/KeyboardArrowLeft'
+
+//Internal components
 import RepoCard from '../RepoCard'
+import IssueCard from '../IssueCard'
 
 const styles = theme => ({
     container: {
@@ -49,9 +57,9 @@ class Form extends React.Component {
             repoOwner: '',
             wizIndex: 0,
             ghParsedObj: {},
-            loadRepoCard: false
+            loadCards: false
         }
-        this.loadRepoCard = false;
+        this.loadCards = false;
         this.octokit = new Octokit({ headers: { accept: 'application/vnd.github.v3+json', 'user-agent': 'octokit/rest.js v1.2.3' } })
     }
 
@@ -75,7 +83,6 @@ class Form extends React.Component {
     }
 
     next() {
-        console.log(this.state)
         if (this.state.wizIndex === 0 && this.state.repoUrl.valid) {
             let ghObject = githubUrlParser(this.state.repoUrl.value)
             if (ghObject
@@ -91,7 +98,6 @@ class Form extends React.Component {
                                 repoOwner: ghObject.owner,
                                 wizIndex: ++this.state.wizIndex,
                                 ghParsedObj: ghObject,
-                                loadRepoCard: true
                             })
                         }
                     })
@@ -112,7 +118,11 @@ class Form extends React.Component {
                 if (response
                     && response.status === 200
                     && response.data) {
-                    this.setState({ selectedIssue: response.data, wizIndex: ++this.state.wizIndex })
+                    this.setState({
+                        selectedIssue: response.data,
+                        wizIndex: ++this.state.wizIndex,
+                        loadCards: true
+                    })
                 }
             }).catch(error => {
                 // Error display
@@ -226,20 +236,32 @@ class Form extends React.Component {
             description: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.description : ''
         }
 
-        let repoCard =
+        let issueCardInfo = {
+            title: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.title : '',
+            createdAt: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.created_at : '',
+            body: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.body : '',
+            issueId: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.number : ''
+        }
+
+        let cards =
             <Grid container
-                spacing={24}
+                spacing={16}
                 justify='center' >
-                <Grid item xs={6}>
+                <Grid item xs={12}>
                     <h3 className={classes.bountyCardTitle}>My Bounty</h3>
+                </Grid>
+                <Grid item xs={6}>
                     <RepoCard info={repoCardInfo} />
+                </Grid>
+                <Grid item xs={6}>
+                    <IssueCard info={issueCardInfo} />
                 </Grid>
             </Grid >
 
         let selection =
             <Grid
                 container
-                spacing={24}
+                spacing={16}
                 direction='row'>
                 <Grid item xs={12}>
                     <Button variant="contained" onClick={this.back.bind(this)} color="secondary" className={classes.button}>
@@ -257,7 +279,7 @@ class Form extends React.Component {
             <form className={classes.container} noValidate autoComplete="off">
                 {wizard[this.state.wizIndex]}
                 {selection}
-                {this.state.loadRepoCard && repoCard}
+                {this.state.loadCards && cards}
             </form>
         )
     }

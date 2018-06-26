@@ -183,7 +183,7 @@ class App extends Component {
       <div className="App">
         <Grid
           container
-          spacing={24}
+          spacing={16}
           justify='center'>
           <Grid item xs={12}>
             <ButtonAppBar loadAccessToken={this.loadToken.bind(this)} />
