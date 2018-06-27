@@ -3,7 +3,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 
-//Materialize
+//MaterialUI
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import NextIcon from '@material-ui/icons/KeyboardArrowRight'
@@ -13,7 +13,7 @@ import Grid from '@material-ui/core/Grid'
 //3rd party libs
 import validator from 'validator'
 import Octokit from '@octokit/rest'
-import toast from 'react-toastify'
+import { ToastContainer, toast } from 'react-toastify'
 import isGitUrl from 'is-git-url'
 import githubUrlParser from 'parse-github-url'
 
@@ -103,6 +103,7 @@ class Form extends React.Component {
                     })
                     .catch(error => {
                         // Error display
+                        toast.warn('Repository not found')
                         console.log(error)
                     })
             }
@@ -125,6 +126,7 @@ class Form extends React.Component {
                     })
                 }
             }).catch(error => {
+                toast.warn('Issue not found')
                 // Error display
                 console.log(error)
             })
@@ -141,6 +143,8 @@ class Form extends React.Component {
 
     back() {
         this.state.wizIndex > 0 ? this.setState({ wizIndex: --this.state.wizIndex }) : this.setState({ wizIndex: 0 })
+        if (this.state.wizIndex === 0) { this.setState({ selectedIssue: {}, selectedRepo: {} }) }
+        if (this.state.wizIndex === 1) { this.setState({ selectedIssue: {} }) }
     }
 
     handleChange = name => event => {
@@ -170,22 +174,16 @@ class Form extends React.Component {
         })
     }
 
-    getRepoInfo(repo) {
-
-        //Validate repoUrl input is valid
-        // Then look for the specific issue set by the user
-        // Load issue info to the state so we can show it to the user.
-
-        // The idea is to only ask for repoName and issueID. We could infer username and
-        // show all issue related information after the user inputs that data. This to help
-        // the user make sure he/she is selecting the correct issue. (One would hate setting up a bounty for the wrong repo)
-    }
-
     render() {
+
         const { classes } = this.props
 
         let error = true,
-            wizard = []
+            wizard = [],
+            repoCardInfo = {},
+            issueCardInfo = {},
+            loadRepo = false,
+            loadIssue = false
 
         wizard[0] = <TextField
             id="RepoUrl"
@@ -227,21 +225,28 @@ class Form extends React.Component {
             className={classes.textField}
             margin="normal" />
 
-        let repoCardInfo = {
-            repoName: Object.keys(this.state.ghParsedObj).length !== 0 ? this.state.ghParsedObj.name : '',
-            userName: Object.keys(this.state.ghParsedObj).length !== 0 ? this.state.ghParsedObj.owner : '',
-            image: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.owner.avatar_url : '',
-            userLink: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.owner.html_url : '',
-            openIssues: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.open_issues_count : '',
-            description: Object.keys(this.state.selectedRepo).length !== 0 ? this.state.selectedRepo.description : ''
-        }
 
-        let issueCardInfo = {
-            title: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.title : '',
-            createdAt: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.created_at : '',
-            body: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.body : '',
-            issueId: Object.keys(this.state.selectedIssue).length !== 0 ? this.state.selectedIssue.number : ''
-        }
+        if (Object.keys(this.state.ghParsedObj).length !== 0 && Object.keys(this.state.selectedRepo).length !== 0) {
+            repoCardInfo = {
+                repoName: this.state.ghParsedObj.name,
+                userName: this.state.ghParsedObj.owner,
+                image: this.state.selectedRepo.owner.avatar_url,
+                userLink: this.state.selectedRepo.owner.html_url,
+                openIssues: this.state.selectedRepo.open_issues_count,
+                description: this.state.selectedRepo.description
+            }
+            loadRepo = true
+        } else loadRepo = false
+
+        if (Object.keys(this.state.selectedIssue).length !== 0) {
+            issueCardInfo = {
+                title: this.state.selectedIssue.title,
+                createdAt: this.state.selectedIssue.created_at,
+                body: this.state.selectedIssue.body,
+                issueId: this.state.selectedIssue.number
+            }
+            loadIssue = true
+        } else loadIssue = false
 
         let cards =
             <Grid container
@@ -251,10 +256,11 @@ class Form extends React.Component {
                     <h3 className={classes.bountyCardTitle}>My Bounty</h3>
                 </Grid>
                 <Grid item xs={6}>
-                    <RepoCard info={repoCardInfo} />
+                    {loadRepo && <RepoCard info={repoCardInfo} />}
+
                 </Grid>
                 <Grid item xs={6}>
-                    <IssueCard info={issueCardInfo} />
+                    {loadIssue && <IssueCard info={issueCardInfo} />}
                 </Grid>
             </Grid >
 
@@ -276,11 +282,14 @@ class Form extends React.Component {
             </Grid>
 
         return (
-            <form className={classes.container} noValidate autoComplete="off">
-                {wizard[this.state.wizIndex]}
-                {selection}
-                {this.state.loadCards && cards}
-            </form>
+            <div>
+                <form className={classes.container} noValidate autoComplete="off">
+                    {wizard[this.state.wizIndex]}
+                    {selection}
+                    {cards}
+                </form>
+                <ToastContainer />
+            </div>
         )
     }
 }

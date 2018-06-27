@@ -1,9 +1,11 @@
+//React
 import React, { Component } from 'react'
+
+//Truffle
 import HuntContract from '../build/contracts/Hunt.json'
 import getWeb3 from './utils/getWeb3'
-import './App.css'
 
-//Materialize components
+//MaterialUI components
 import ButtonAppBar from './components/material/AppBar'
 import ButtonBases from './components/material/ButtonBases'
 import Form from './components/material/Form'
@@ -13,6 +15,9 @@ import BountyCard from './components/BountyCard'
 //Toast
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+
+//Global styles
+import './App.css'
 
 
 
@@ -42,6 +47,7 @@ class App extends Component {
         this.instantiateContract()
       })
       .catch(() => {
+
         console.log('Error finding web3.')
       })
   }
@@ -54,7 +60,9 @@ class App extends Component {
     const huntContract = contract(HuntContract)
     huntContract.setProvider(this.state.web3.currentProvider)
     this.state.web3.eth.getAccounts((error, accounts) => {
-      if (error) console.log(error)
+      console.log("Error", error)
+      console.log("Accounts: ", accounts)
+      if (error) console.log("Here!", error)
       else {
         this.setState({
           contractInstance: huntContract,
@@ -115,16 +123,16 @@ class App extends Component {
       })
   }
 
-  loadUserInfo() {
-
-  }
-
   /**
    * Asynchronously loads the list of available bounties.
    * @param {object} contract - Contract instance 
    */
   async loadList(contract) {
     let contractInstance
+    if (Object.keys(contract).length === 0) {
+      toast.error("Make sure to activate metamask", { autoClose: false })
+      return false
+    }
     return contract.deployed()
       .then(instance => {
         contractInstance = instance
@@ -153,7 +161,7 @@ class App extends Component {
               finsihed: val[6]
             }
             if (!bounty.finsihed)
-              stateBounties.push(<Grid item xs={4} key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
+              stateBounties.push(<Grid item xs key={idx} ><BountyCard data={bounty} auth={this.state.accessToken ? this.state.accessToken : {}} /></Grid>)
           })
           return stateBounties
         }
@@ -190,9 +198,6 @@ class App extends Component {
           </Grid>
           <Grid item xs={8}>
             <ButtonBases onSelect={this.actionSelected.bind(this)} />
-          </Grid>
-          <Grid item xs={12}>
-            <hr />
           </Grid>
         </Grid>
         <Grid
